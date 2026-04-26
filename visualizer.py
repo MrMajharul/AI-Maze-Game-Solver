@@ -17,11 +17,8 @@ from typing import List, Optional, Tuple
 import pygame
 
 from maze import Maze
-from solver import ALGORITHMS
 
-# ---------------------------------------------------------------------------
 # Palette — deep dark theme with vibrant accents
-# ---------------------------------------------------------------------------
 BG          = (10,  12,  20)
 PANEL_BG    = (18,  22,  36)
 PANEL_BORDER= (40,  50,  80)
@@ -49,9 +46,7 @@ BTN_BORDER  = (60,  80, 140)
 SLIDER_RAIL = (40,  50,  80)
 SLIDER_KNOB = (100, 160, 255)
 
-# ---------------------------------------------------------------------------
 # Constants
-# ---------------------------------------------------------------------------
 SIDEBAR_W   = 260
 MIN_CELL    = 8
 FPS         = 60
@@ -64,9 +59,8 @@ ALGO_NAMES  = list(ALGORITHMS.keys())   # BFS, DFS, Dijkstra, A*
 SPEED_MIN, SPEED_MAX = 1, 200           # nodes animated per frame
 
 
-# ---------------------------------------------------------------------------
 # Small UI helpers
-# ---------------------------------------------------------------------------
+
 
 def lerp_color(a, b, t):
     t = max(0.0, min(1.0, t))
@@ -86,9 +80,8 @@ def draw_text(surf, text, font, color, x, y, anchor="topleft"):
     return r
 
 
-# ---------------------------------------------------------------------------
+
 # Button
-# ---------------------------------------------------------------------------
 
 class Button:
     def __init__(self, rect, label, tag=None, toggle=False, active=False):
@@ -122,9 +115,7 @@ class Button:
         draw_text(surf, self.label, font, BTN_TEXT, cx, cy, "center")
 
 
-# ---------------------------------------------------------------------------
-# Slider
-# ---------------------------------------------------------------------------
+
 
 class Slider:
     def __init__(self, x, y, w, lo, hi, value, label):
@@ -212,7 +203,7 @@ class Visualiser:
         self.font_xs     = f(11)
         self.font_stat   = f(18, bold=True)
 
-    # ── app state ─────────────────────────────────────────────────────────
+    # ── app state ─
 
     def _init_state(self):
         self.maze:          Optional[Maze]       = None
@@ -240,8 +231,7 @@ class Visualiser:
         # Placement mode: None | "start" | "goal"
         self.placement_mode: Optional[str] = None
 
-    # ── UI widgets ────────────────────────────────────────────────────────
-
+    # ── UI widgets 
     def _build_ui(self):
         sx = self.screen_w - SIDEBAR_W + 16
         w  = SIDEBAR_W - 32
@@ -305,7 +295,7 @@ class Visualiser:
         self.slider_speed.value = min(SPEED_MAX, max(SPEED_MIN,
                                        self.slider_speed.value))
 
-    # ── Maze / solver control ─────────────────────────────────────────────
+    # ── Maze / solver control functions
 
     def _new_maze(self):
         self._stop_solving()
@@ -371,8 +361,7 @@ class Visualiser:
             return (r, c)
         return None
 
-    # ── Step solver generator ─────────────────────────────────────────────
-
+    # ── Step solver generator to animate it
     def _tick_solver(self):
         if not self.solving or self.paused or self.generator is None:
             return
@@ -399,7 +388,7 @@ class Visualiser:
                 self.elapsed_ms  = (time.perf_counter() - self._solve_start) * 1000
                 return
 
-    # ── Comparison (instant, no animation) ───────────────────────────────
+    # ── Comparison (instant, no animation) 
 
     def _run_compare(self):
         if self.maze is None:
@@ -427,7 +416,7 @@ class Visualiser:
         self.final_path = []
         self.maze.reset_markers()
 
-    # ── Drawing ───────────────────────────────────────────────────────────
+    # ── Drawing functions
 
     def _cell_size(self):
         maze_w = self.screen_w - SIDEBAR_W
@@ -457,10 +446,10 @@ class Visualiser:
 
                 if v == 1:                      # wall
                     color = WALL
-                elif v == 2:                    # start
-                    color = START_CLR
-                elif v == 3:                    # goal
-                    color = GOAL_CLR
+                elif v == 2:                    # start (marker drawn later)
+                    color = PATH
+                elif v == 3:                    # goal (marker drawn later)
+                    color = PATH
                 elif cell in final_path_set:    # final path
                     color = FINAL_PATH
                 elif cell in explored_set:      # explored
@@ -475,13 +464,35 @@ class Visualiser:
                 if cs >= 10:
                     pygame.draw.rect(self.screen, BG, rect, 1)
 
-        # Glow on start / goal
-        self._draw_glow(off_x + self.maze.start[1] * cs + cs // 2,
-                        off_y + self.maze.start[0] * cs + cs // 2,
-                        START_CLR, cs)
-        self._draw_glow(off_x + self.maze.goal[1] * cs + cs // 2,
-                        off_y + self.maze.goal[0] * cs + cs // 2,
-                        GOAL_CLR, cs)
+        # Start / goal markers (circles constrained to 1 cell)
+        self._draw_marker_circle(
+            off_x + self.maze.start[1] * cs + cs // 2,
+            off_y + self.maze.start[0] * cs + cs // 2,
+            START_CLR,
+            cs,
+        )
+        self._draw_marker_circle(
+            off_x + self.maze.goal[1] * cs + cs // 2,
+            off_y + self.maze.goal[0] * cs + cs // 2,
+            GOAL_CLR,
+            cs,
+        )
+
+        # Labels on start / goal
+        self._draw_cell_label(
+            "S",
+            off_x + self.maze.start[1] * cs + cs // 2,
+            off_y + self.maze.start[0] * cs + cs // 2,
+            cs,
+            TEXT_PRIMARY,
+        )
+        self._draw_cell_label(
+            "G",
+            off_x + self.maze.goal[1] * cs + cs // 2,
+            off_y + self.maze.goal[0] * cs + cs // 2,
+            cs,
+            TEXT_PRIMARY,
+        )
 
         # ── Placement mode overlay hint
         if self.placement_mode:
@@ -498,15 +509,31 @@ class Visualiser:
             pygame.draw.rect(self.screen, clr, bg_rect, 2, border_radius=8)
             self.screen.blit(hint, ((maze_w - hw) // 2, 14 + pad // 2))
 
-    def _draw_glow(self, cx, cy, color, cs):
-        radius = max(cs, 10)
-        glow   = pygame.Surface((radius * 4, radius * 4), pygame.SRCALPHA)
-        for i in range(6, 0, -1):
-            alpha = int(18 * i)
-            r     = radius + i * 4
-            pygame.draw.circle(glow, (*color, alpha), (radius * 2, radius * 2), r)
-        self.screen.blit(glow, (cx - radius * 2, cy - radius * 2),
-                         special_flags=pygame.BLEND_RGBA_ADD)
+    def _draw_marker_circle(self, cx: int, cy: int, color, cs: int):
+        # Fit the marker within a single cell ("1×1 board size").
+        radius = max(3, cs // 2 - 2)
+        pygame.draw.circle(self.screen, color, (cx, cy), radius)
+        pygame.draw.circle(self.screen, BG, (cx, cy), radius, 2)
+
+    def _cell_label_font(self, cs: int) -> pygame.font.Font:
+        # Cache a font sized to the current cell size (recreated on resize).
+        size = max(12, int(cs * 0.72))
+        cache = getattr(self, "_cell_font_cache", None)
+        if cache is None:
+            cache = {}
+            self._cell_font_cache = cache
+        if size not in cache:
+            cache[size] = pygame.font.SysFont("DejaVu Sans", size, bold=True)
+        return cache[size]
+
+    def _draw_cell_label(self, text: str, cx: int, cy: int, cs: int, color):
+        # Only draw labels when cells are big enough to be readable.
+        if cs < 12:
+            return
+        font = self._cell_label_font(cs)
+        img = font.render(text, True, color)
+        r = img.get_rect(center=(cx, cy))
+        self.screen.blit(img, r)
 
     def _draw_sidebar(self):
         sx = self.screen_w - SIDEBAR_W
@@ -640,7 +667,7 @@ class Visualiser:
         draw_text(self.screen, "★ = best  |  click anywhere to dismiss",
                   self.font_xs, TEXT_SECONDARY, panel.centerx, panel.bottom - 16, "midbottom")
 
-    # ── Event handling ────────────────────────────────────────────────────
+    # ── Event handling 
 
     def _handle_events(self):
         for event in pygame.event.get():
@@ -739,13 +766,11 @@ class Visualiser:
 
         return True
 
-    # ── Animated intro gradient title on canvas ───────────────────────────
-
+    # ── Animated intro gradient title on canvas 
     def _draw_canvas_bg(self):
         self.screen.fill(BG)
 
-    # ── Main loop ─────────────────────────────────────────────────────────
-
+    # ── Main loop 
     def run(self):
         running = True
         while running:

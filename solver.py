@@ -13,17 +13,14 @@ from typing import Generator, List, Tuple
 
 from maze import Maze
 
-
-# ---------------------------------------------------------------------------
 # Type aliases
-# ---------------------------------------------------------------------------
+
 Cell = Tuple[int, int]
 Step = Tuple[str, List[Cell]]
 
 
-# ---------------------------------------------------------------------------
 # Shared helpers
-# ---------------------------------------------------------------------------
+
 
 def _reconstruct_path(came_from: dict, end: Cell) -> List[Cell]:
     path = []
@@ -34,10 +31,8 @@ def _reconstruct_path(came_from: dict, end: Cell) -> List[Cell]:
     path.reverse()
     return path
 
-
-# ---------------------------------------------------------------------------
 # BFS — guaranteed shortest path (unweighted)
-# ---------------------------------------------------------------------------
+
 
 def bfs(maze: Maze) -> Generator[Step, None, None]:
     """Breadth-First Search — shortest path in unweighted maze."""
@@ -62,9 +57,8 @@ def bfs(maze: Maze) -> Generator[Step, None, None]:
     yield ("path", [])  # no path found
 
 
-# ---------------------------------------------------------------------------
 # DFS — not shortest, but explores dramatically
-# ---------------------------------------------------------------------------
+
 
 def dfs(maze: Maze) -> Generator[Step, None, None]:
     """Depth-First Search — may not find the shortest path."""
@@ -89,9 +83,8 @@ def dfs(maze: Maze) -> Generator[Step, None, None]:
     yield ("path", [])
 
 
-# ---------------------------------------------------------------------------
 # Dijkstra — uniform cost (same as BFS for unit weights, but shows cost)
-# ---------------------------------------------------------------------------
+
 
 def dijkstra(maze: Maze) -> Generator[Step, None, None]:
     """Dijkstra's Algorithm — shortest path with cost tracking."""
@@ -122,9 +115,9 @@ def dijkstra(maze: Maze) -> Generator[Step, None, None]:
     yield ("path", [])
 
 
-# ---------------------------------------------------------------------------
+
 # A* — heuristic-guided, typically fastest to goal
-# ---------------------------------------------------------------------------
+
 
 def _manhattan(a: Cell, b: Cell) -> int:
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
@@ -165,10 +158,8 @@ def astar(maze: Maze) -> Generator[Step, None, None]:
 
     yield ("path", [])
 
-
-# ---------------------------------------------------------------------------
 # Registry — easy lookup by name
-# ---------------------------------------------------------------------------
+
 
 ALGORITHMS = {
     "BFS": bfs,
